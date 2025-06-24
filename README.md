@@ -31,8 +31,8 @@ Transform your personal notes into an intelligent knowledge graph accessible thr
 
 1. **Clone the repository:**
 ```bash
-git clone https://github.com/fstrauf/universal-knowledge-context.git
-cd universal-knowledge-context
+git clone https://github.com/fstrauf/uNotes.git
+cd uNotes
 ```
 
 2. **Set up the environment:**
