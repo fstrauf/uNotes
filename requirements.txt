@@ -1,0 +1,13 @@
+graphrag
+pandas
+numpy
+networkx
+obsidiantools
+python-frontmatter
+fastmcp
+uvicorn
+openai
+python-dotenv
+pyyaml
+scikit-learn
+watchdog 
