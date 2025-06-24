@@ -5,62 +5,131 @@ Setup script for Universal Personal Knowledge Context System
 
 import os
 import sys
+import json
 from pathlib import Path
 
-def create_env_file():
-    """Create .env file if it doesn't exist"""
-    env_file = Path('.env')
-    env_example = Path('.env.example')
+def create_directories():
+    """Create necessary directories"""
+    directories = [
+        'data/input',
+        'data/output', 
+        'data/cache',
+        'data/logs',
+        'data/processed',
+        'tests'
+    ]
     
-    if not env_file.exists() and env_example.exists():
-        print("Creating .env file from template...")
-        env_file.write_text(env_example.read_text())
-        print("Please edit .env file and add your OpenAI API key")
-        return False
-    elif not env_file.exists():
-        print("No .env file found. Please create one with GRAPHRAG_API_KEY")
-        return False
+    for directory in directories:
+        Path(directory).mkdir(parents=True, exist_ok=True)
+        print(f"✓ Created directory: {directory}")
+
+def setup_environment():
+    """Setup environment file if it doesn't exist"""
+    if not os.path.exists('.env'):
+        if os.path.exists('.env.example'):
+            import shutil
+            shutil.copy('.env.example', '.env')
+            print("✓ Created .env file from .env.example")
+            print("⚠️  Please edit .env file with your API key and vault path")
+        else:
+            print("⚠️  No .env.example found. Please create .env manually")
+    else:
+        print("✓ .env file already exists")
+
+def generate_claude_config():
+    """Generate Claude Desktop MCP configuration"""
+    current_dir = os.path.abspath('.')
+    python_path = os.path.join(current_dir, 'myenv', 'bin', 'python')
+    server_path = os.path.join(current_dir, 'src', 'mcp_server.py')
+    data_path = os.path.join(current_dir, 'data')
     
-    return True
+    # Check if virtual environment exists
+    if not os.path.exists(python_path):
+        python_path = sys.executable
+        print(f"⚠️  Using system Python: {python_path}")
+        print("   Consider using a virtual environment for better isolation")
+    
+    config = {
+        "universal-knowledge": {
+            "command": python_path,
+            "args": [server_path, data_path],
+            "env": {
+                "GRAPHRAG_API_KEY": "${GRAPHRAG_API_KEY}"
+            }
+        }
+    }
+    
+    # Save config for user to add to Claude Desktop
+    with open('claude_mcp_config.json', 'w') as f:
+        json.dump(config, f, indent=2)
+    
+    print(f"✓ Generated Claude Desktop MCP configuration: claude_mcp_config.json")
+    return config
+
+def check_dependencies():
+    """Check if required dependencies are installed"""
+    required_packages = [
+        'graphrag',
+        'fastmcp', 
+        'pandas',
+        'watchdog',
+        'python-frontmatter',
+        'obsidiantools'
+    ]
+    
+    missing = []
+    for package in required_packages:
+        try:
+            __import__(package.replace('-', '_'))
+        except ImportError:
+            missing.append(package)
+    
+    if missing:
+        print(f"❌ Missing dependencies: {', '.join(missing)}")
+        print("   Run: pip install -r requirements.txt")
+        return False
+    else:
+        print("✓ All required dependencies are installed")
+        return True
 
 def check_python_version():
     """Check Python version compatibility"""
-    if sys.version_info < (3, 10):
-        print("Error: Python 3.10 or higher required")
+    if sys.version_info < (3, 8):
+        print("❌ Python 3.8 or higher required")
+        print(f"   Current version: {sys.version}")
         return False
-    return True
-
-def setup_directories():
-    """Create necessary directories"""
-    dirs = ['data', 'data/input', 'data/output', 'config']
-    for dir_path in dirs:
-        Path(dir_path).mkdir(parents=True, exist_ok=True)
-    print("Created necessary directories")
+    else:
+        print(f"✓ Python version {sys.version.split()[0]} is compatible")
+        return True
 
 def main():
-    print("Setting up Universal Personal Knowledge Context System...")
+    print("🚀 Setting up Universal Personal Knowledge Context System...")
+    print("=" * 60)
     
+    # Check Python version first
     if not check_python_version():
         return 1
     
-    setup_directories()
-    
-    if not create_env_file():
-        print("\nNext steps:")
-        print("1. Edit the .env file and add your OpenAI API key")
-        print("2. Run: python main.py --vault-path /path/to/your/obsidian/vault")
+    # Check dependencies
+    if not check_dependencies():
+        print("\n❌ Setup incomplete - please install dependencies first")
+        print("   pip install -r requirements.txt")
         return 1
     
-    print("\nSetup complete!")
-    print("\nUsage examples:")
-    print("1. Process vault and run indexing:")
-    print("   python main.py --vault-path /path/to/vault")
-    print("\n2. Interactive query mode:")
-    print("   python main.py --vault-path /path/to/vault --interactive")
-    print("\n3. Run validation tests:")
-    print("   python main.py --vault-path /path/to/vault --run-validation")
+    create_directories()
+    setup_environment()
+    claude_config = generate_claude_config()
+    
+    print("\n✅ Setup complete!")
+    print("\n📋 Next steps:")
+    print("1. Edit .env file with your OpenAI API key and vault path")
+    print("2. Add the MCP configuration to Claude Desktop:")
+    print(f"   - Open: ~/Library/Application Support/Claude/claude_desktop_config.json")
+    print(f"   - Add the configuration from: claude_mcp_config.json")
+    print("3. Run: python main.py --interactive")
+    print("\n💡 For detailed instructions, see README.md")
     
     return 0
-
+    
 if __name__ == "__main__":
     exit(main()) 
